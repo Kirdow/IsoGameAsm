@@ -1,0 +1,7 @@
+# directories
+build/
+dist/
+
+# files
+.obj
+.exe
