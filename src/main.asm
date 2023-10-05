@@ -46,6 +46,7 @@ section .text
     extern wnd_flush
     extern wnd_sync
     extern gfx_fill
+    extern gfx_rect
 
 entry:
     push rbp
@@ -123,6 +124,22 @@ main:
     mov rcx, qword [rbp-8] ; wnd*
     mov rdx, qword [rbp-80] ; color
     call gfx_fill
+
+    mov rcx, qword [rbp-8] ; wnd*
+    mov rdx, 100 ; x
+    mov r8, 100 ; y
+    mov r9, 200 ; width
+    mov qword [rsp+32], 50 ; height
+    mov qword [rsp+40], 0xff0000 ; color
+    call gfx_rect
+
+    mov rcx, qword [rbp-8] ; wnd*
+    mov rdx, 125 ; x
+    mov r8, 50 ; y
+    mov r9, 75 ; width
+    mov qword [rsp+32], 75 ; height
+    mov qword [rsp+40], 0x00ff00 ; color
+    call gfx_rect
 
     mov rcx, qword [rbp-8] ; wnd*
     call wnd_flush
