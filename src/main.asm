@@ -45,6 +45,7 @@ section .text
     extern wnd_create
     extern wnd_flush
     extern wnd_sync
+    extern gfx_fill
 
 entry:
     push rbp
@@ -119,24 +120,9 @@ main:
     jmp .while_pollevent_start
 .while_pollevent_end:
     
-    mov rcx, 0
-.for_i_start:
-    cmp rcx, 640 * 480
-    jge .for_i_end
-
-    mov rax, rcx
-
-    mov rbx, [rbp-8] ; rbx = wnd*
-    mov rax, [rbx] ; rax = wnd->pixels
-    mov rbx, rax ; rbx = wnd->pixels
-    mov rax, rcx ; rax = index
-
-    mov rdx, qword [rbp-80]
-    mov dword [rbx+rax*4], edx
-
-    inc rcx
-    jmp .for_i_start
-.for_i_end:
+    mov rcx, qword [rbp-8] ; wnd*
+    mov rdx, qword [rbp-80] ; color
+    call gfx_fill
 
     mov rcx, qword [rbp-8] ; wnd*
     call wnd_flush
