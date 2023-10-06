@@ -48,6 +48,8 @@ section .text
     extern gfx_fill
     extern gfx_rect
     extern gfx_bmp
+    extern gfx_floor_tile
+    extern gfx_floor
     extern bmp_init
     extern bmp_get
 
@@ -131,26 +133,31 @@ main:
     call gfx_fill
 
     mov rcx, qword [rbp-8] ; wnd*
-    mov rdx, 100 ; x
-    mov r8, 100 ; y
-    mov r9, 200 ; width
-    mov qword [rsp+32], 50 ; height
-    mov qword [rsp+40], 0xff0000 ; color
-    call gfx_rect
-
-    mov rcx, qword [rbp-8] ; wnd*
-    mov rdx, 125 ; x
-    mov r8, 50 ; y
-    mov r9, 75 ; width
-    mov qword [rsp+32], 75 ; height
-    mov qword [rsp+40], 0x00ff00 ; color
-    call gfx_rect
-
-    mov rcx, qword [rbp-8] ; wnd*
     mov rdx, 130 ; x
     mov r8, 55 ; y
     mov r9, 0
     call gfx_bmp
+
+    mov rcx, qword [rbp-8] ; wnd*
+    mov rdx, 0 ; x
+    mov r8, 0 ; y
+    mov r9, 0 ; z
+    mov qword [rsp+32], 0
+    call gfx_floor_tile
+
+    mov rcx, qword [rbp-8] ; wnd*
+    mov rdx, 1 ; x
+    mov r8, 0 ; y
+    mov r9, 0 ; z
+    mov qword [rsp+32], 0
+    call gfx_floor_tile
+
+    mov rcx, qword [rbp-8] ; wnd*
+    mov rdx, 2 ; x
+    mov r8, 0; y
+    mov r9, 0 ; z
+    mov qword [rsp+32], 0
+    call gfx_floor_tile
 
     mov rcx, qword [rbp-8] ; wnd*
     call wnd_flush

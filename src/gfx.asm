@@ -2,8 +2,8 @@ default rel
 bits 64
 
 section .data
-    str_logn db 'Number: %x', 0xd, 0xa, 0
-    str_logn2 db 'Number: %d', 0xd, 0xa, 0
+    str_logn db 'Number: %llx', 0xd, 0xa, 0
+    str_logn2 db 'Number: %lld', 0xd, 0xa, 0
     str_logs db 'String: %s', 0xd, 0xa, 0
     str_logdata db 'Data:', 0xd, 0xa, 0
 
@@ -15,6 +15,8 @@ section .text
     global gfx_fill
     global gfx_rect
     global gfx_bmp
+    global gfx_floor_tile
+    global gfx_floor
 
 ; void gfx_fill(wnd* window, int color);
 gfx_fill:
@@ -287,6 +289,294 @@ gfx_bmp:
 .for_yy_end:
     xor rax, rax
 
+    mov rbx, qword [rbp-8]
+
+    mov rsp, rbp
+    pop rbp
+    ret
+
+; void gfx_floor_tile(wnd* window, int x, int y, int z, int bmpId);
+gfx_floor_tile:
+    push rbp
+    mov rbp, rsp
+    sub rsp, 96
+
+    ; local variables
+    ; rbx               -8
+    ; window            -16
+    ; x                 -24
+    ; y                 -32
+    ; z                 -40
+    ; bmpId             -48
+    ; tmp               -56
+    ; wx                -64
+    ; wy                -72
+
+    ; backup rbx
+    mov qword [rbp-8], rbx
+
+    ; copy parameters
+    mov qword [rbp-16], rcx     ; window
+    mov qword [rbp-24], rdx     ; x
+    mov qword [rbp-32], r8     ; y
+    mov qword [rbp-40], r9      ; z
+    mov rax, qword [rbp+40]     ; bmpId
+    mov qword [rbp-48], rax          ; 
+
+    mov rax, rdx
+    sub rax, r9
+    mov qword [rbp-24], rax
+
+    mov rax, r8
+    sub rax, r9
+    mov qword [rbp-32], rax
+
+    mov rax, qword [rbp-24]
+    sub rax, qword [rbp-32]
+    ; TODO: Do not hard-core 16 (which is zoom / 2)
+    mov rcx, 16
+    mul rcx
+    mov qword [rbp-56], rax
+
+    mov rbx, qword [rbp-16]
+    mov rax, [rbx+8]
+    shr rax, 1
+    add rax, qword [rbp-56]
+    mov rcx, 0x7FFFFFFFFFFFFFFF
+    and rax, rcx
+    mov qword [rbp-64], rax
+
+    mov rax, qword [rbp-24]
+    add rax, qword [rbp-32]
+    ; TODO: Do not hard-core 8 (which is zoom / 4)
+    mov rcx, 8
+    mul rcx
+    mov qword [rbp-56], rax
+
+    mov rbx, qword [rbp-16]
+    mov rax, [rbx+16]
+    shr rax, 1
+    add rax, qword [rbp-56]
+    mov rcx, 0x7FFFFFFFFFFFFFFF
+    and rax, rcx
+    mov qword [rbp-72], rax
+
+    mov rcx, qword [rbp-16]
+    mov rdx, qword [rbp-64]
+    mov r8, qword [rbp-72]
+    mov r9, qword [rbp-48]
+
+    call gfx_floor
+
+    ; restore rbx
+    mov rbx, qword [rbp-8]
+
+    xor rax, rax
+
+    mov rsp, rbp
+    pop rbp
+    ret
+
+; void gfx_floor(wnd* window, int x, int y, int bmpId);
+gfx_floor:
+    push rbp
+    mov rbp, rsp
+    sub rsp, 224
+
+    ; local variables
+    ; rbx               -8
+    ; window            -16
+    ; x                 -24
+    ; y                 -32
+    ; bmp               -40
+    ; width             -48
+    ; height            -56
+    ; pixels            -64
+    ; wpixels           -72
+    ; wwidth            -80
+    ; wheight           -88
+    ; size              -96
+    ; halfsize          -104
+    ; startX            -112
+    ; startY            -120
+    ; yo                -128
+    ; xo                -136
+    ; yt                -144
+    ; xt                -152
+    ; xPix              -160
+    ; yPix              -168
+    ; xtd               -176
+    ; ytd               -184
+    ; rawPixel          -192
+
+    ; backup rbx
+    mov qword [rbp-8], rbx
+
+    ; copy parameters
+    mov qword [rbp-16], rcx     ; window
+    mov qword [rbp-24], rdx     ; x
+    mov qword [rbp-32], r8      ; y
+    
+    ; get bitmap
+    mov rcx, r9
+    call bmp_get
+    mov qword [rbp-40], rax     ; bmp*
+
+    ; get bitmap values
+    mov rbx, rax                ; bmp*
+    mov rax, qword [rbx+8]      ; bmp->width
+    mov qword [rbp-48], rax     ; width
+    mov rax, qword [rbx+16]     ; bmp->height
+    mov qword [rbp-56], rax     ; height
+    mov rax, qword [rbx+0]      ; bmp->pixels
+    mov qword [rbp-64], rax     ; pixels
+
+    ; get window values
+    mov rbx, qword [rbp-16]     ; wnd*
+    mov rax, qword [rbx+0]      ; wnd->pixels
+    mov qword [rbp-72], rax     ; wpixels
+    mov rax, qword [rbx+8]      ; wnd->width
+    mov qword [rbp-80], rax     ; wwidth
+    mov rax, qword [rbx+16]     ; wnd->height
+    mov qword [rbp-88], rax     ; wheight
+
+    mov rax, 32      ; take this as input later
+    mov qword [rbp-96], rax     ; size
+    shr rax, 1
+    mov qword [rbp-104], rax    ; size / 2
+
+    mov rax, qword [rbp-24]     ; x
+    mov qword [rbp-112], rax    ; startX
+    mov rax, qword [rbp-32]     ; y
+    mov rcx, qword [rbp-104]    ; halfsize
+    shr rcx, 1                  ; halfsize / 2
+    sub rax, rcx                ; y - halfsize / 2
+    mov qword [rbp-120], rax    ; startY = y - halfsize / 2
+
+    mov qword [rbp-128], 0      ; yo
+    jmp .for_yo_start
+.for_yo_cont:
+    mov rcx, qword [rbp-128]    ; yo
+    inc rcx
+    mov qword [rbp-128], rcx    ; yo
+.for_yo_start:
+    mov rcx, qword [rbp-128]    ; yo
+    mov rax, qword [rbp-104]    ; halfsize
+    shl rax, 1                  ; halfsize * 2
+    cmp rcx, rax
+    jg .for_yo_end
+    mov rax, qword [rbp-128]    ; yo
+    mov rcx, qword [rbp-56]     ; bmp->height (height)
+    mul rcx
+    xor rdx, rdx
+    mov rcx, qword [rbp-104]    ; halfsize
+    div rcx                     ; yo * bmp->height / halfsize
+    mov qword [rbp-144], rax    ; yt
+    shr rax, 1
+    mov rcx, qword [rbp-56]     ; bmp->height
+    cmp rax, rcx
+    jl .yt_skip
+    sub rcx, 1
+    mov rax, rcx
+.yt_skip:
+    mov qword [rbp-184], rax    ; ytd = yt / 2
+
+    mov qword [rbp-136], 0      ; xo
+    jmp .for_xo_start
+.for_xo_cont:
+    mov rcx, qword [rbp-136]    ; xo
+    inc rcx
+    mov qword [rbp-136], rcx    ; xo
+.for_xo_start:
+    mov rcx, qword [rbp-136]    ; xo
+    mov rax, qword [rbp-96]     ; size
+    cmp rcx, rax
+    jg .for_xo_end
+    mov rax, qword [rbp-136]    ; xo
+    mov rcx, qword [rbp-48]     ; bmp->width (width)
+    mul rcx
+    xor rdx, rdx
+    mov rcx, qword [rbp-104]    ; halfsize
+    div rcx                     ; xo * bmp->width / [halfsize (size / 2)]
+    mov qword [rbp-152], rax    ; xt
+    shr rax, 1
+    mov rcx, qword [rbp-48]     ; bmp->width
+    cmp rax, rcx
+    jl .xt_skip
+    sub rcx, 1
+    mov rax, rcx
+.xt_skip:
+    mov qword [rbp-176], rax    ; xtd = tx / 2
+
+    xor rax, rax                ; xPix = 0
+    mov rcx, qword [rbp-136]    ; xo
+    add rax, rcx                ; xPix += xo
+    mov rcx, qword [rbp-128]    ; yo
+    sub rax, rcx                ; xPix -= yo
+
+    shr rax, 1                  ; xPix / 2
+    mov rcx, qword [rbp-112]    ; startX
+    add rax, rcx                ; xPix = startX + xPix / 2
+
+    mov rcx, 0x7FFFFFFFFFFFFFFF
+    and rax, rcx
+    mov qword [rbp-160], rax    ; xPix
+
+    xor rax, rax                ; yPix = 0
+    mov rcx, qword [rbp-136]    ; xo
+    shr rcx, 1                  ; xo / 2
+    add rax, rcx                ; yPix += xo / 2
+    mov rcx, qword [rbp-128]    ; yo
+    shr rcx, 1                  ; yo / 2
+    add rax, rcx                ; yPix += yo / 2
+
+    shr rax, 1                  ; yPix / 2
+    mov rcx, qword [rbp-120]    ; startY
+    add rax, rcx                ; yPix = startY + yPix / 2
+
+    mov qword [rbp-168], rax    ; yPix
+
+    cmp rax, 0
+    jl .for_xo_cont             ; yPix < 0
+    mov rcx, qword [rbp-88]     ; wnd->height (wheight)
+    cmp rax, rcx
+    jge .for_xo_cont            ; yPix >= wnd->height
+
+    mov rax, qword [rbp-160]    ; xPix
+    cmp rax, 0
+    jl .for_xo_cont             ; xPix < 0
+    mov rcx, qword [rbp-80]     ; wnd->width (wwidth)
+    cmp rax, rcx
+    jge .for_xo_cont            ; yPix >= wnd->width
+
+    
+    mov rax, qword [rbp-184]    ; ytd
+    mov rcx, qword [rbp-48]     ; bmp->width
+    mul rcx                     ; ytd * bmp->width
+    mov rcx, qword [rbp-176]    ; xtd
+    add rax, rcx
+    mov rbx, qword [rbp-64]     ; bmp->pixels
+    xor rdx, rdx
+    mov edx, dword [rbx+rax*4]  ; bmp->pixels[xtd + ytd * bmp->width]
+    cmp rdx, 0xff00ff
+    je .for_xo_cont
+    mov qword [rbp-192], rdx    ; rawPixel
+    mov rax, qword [rbp-168]    ; yPix
+    mov rcx, qword [rbp-80]     ; wnd->width
+    mul rcx                     ; yPix * wnd->width
+    mov rcx, qword [rbp-160]    ; xPix
+    add rax, rcx
+    mov rbx, qword [rbp-72]     ; wnd->pixels
+    mov rdx, qword [rbp-192]    ; rawPixel
+    mov dword [rbx+rax*4], edx  ; wnd->pixels[xPix + yPix * wnd->width]
+
+    jmp .for_xo_cont
+.for_xo_end:
+    jmp .for_yo_cont
+.for_yo_end:
+    xor rax, rax
+
+    ; restore rbx
     mov rbx, qword [rbp-8]
 
     mov rsp, rbp
