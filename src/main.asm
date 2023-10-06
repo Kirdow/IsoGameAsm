@@ -47,6 +47,9 @@ section .text
     extern wnd_sync
     extern gfx_fill
     extern gfx_rect
+    extern gfx_bmp
+    extern bmp_init
+    extern bmp_get
 
 entry:
     push rbp
@@ -68,6 +71,8 @@ main:
     mov rbp, rsp
     sub rsp, 96 + 64 + 16
     
+    call bmp_init
+
     mov rcx, 0x20 ; SDL_INIT_VIDEO
     call SDL_Init
     cmp rax, 0
@@ -86,8 +91,8 @@ main:
     call printf
     
     lea rcx, [title]
-    mov rdx, 640
-    mov r8, 480
+    mov rdx, 320
+    mov r8, 240
     call wnd_create
 
     cmp rax, 0
@@ -140,6 +145,12 @@ main:
     mov qword [rsp+32], 75 ; height
     mov qword [rsp+40], 0x00ff00 ; color
     call gfx_rect
+
+    mov rcx, qword [rbp-8] ; wnd*
+    mov rdx, 130 ; x
+    mov r8, 55 ; y
+    mov r9, 0
+    call gfx_bmp
 
     mov rcx, qword [rbp-8] ; wnd*
     call wnd_flush

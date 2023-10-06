@@ -73,13 +73,18 @@ wnd_create:
     call printf
     
     ; create window
-    mov rcx, qword [rbp-8]              ; title
     mov rdx, 0x2FFF0000
     mov r8, 0x2FFF0000
-    mov r9, qword [rbp-16]              ; width
+    mov rax, qword [rbp-16]              ; width
+    mov rcx, 2
+    mul rcx
+    mov r9, rax
     mov rax, qword [rbp-24]             ; height
+    mov rcx, 2
+    mul rcx
     mov qword [rsp+32], rax             ;
     mov qword [rsp+40], 4
+    mov rcx, qword [rbp-8]              ; title
 
     call SDL_CreateWindow
 
