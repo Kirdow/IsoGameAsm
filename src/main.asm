@@ -30,7 +30,8 @@ section .data
     success db 'Success', 0xd, 0xa, 0
     failed db 'Failed', 0xd, 0xa, 0
 
-    str_logn db 'Number: %x', 0xd, 0xa, 0
+    str_logn db 'Number: %llx', 0xd, 0xa, 0
+    str_logn2 db 'Number: %lld', 0xd, 0xa, 0
     str_logs db 'String: %s', 0xd, 0xa, 0
 
     str_looptest db '[LOOP TEST]', 0xd, 0xa, 0
@@ -71,7 +72,7 @@ entry:
 main:
     push rbp
     mov rbp, rsp
-    sub rsp, 96 + 64 + 16
+    sub rsp, 176
     
     call bmp_init
 
@@ -138,26 +139,61 @@ main:
     mov r9, 0
     call gfx_bmp
 
+    mov qword [rbp-88], 0           ; y
+    jmp .for_y_start
+.for_y_cont:
+    mov rcx, qword [rbp-88]         ; y
+    inc rcx
+    mov qword [rbp-88], rcx         ; y
+.for_y_start:
+    mov rax, qword [rbp-88]         ; y
+    cmp rax, 5
+    jge .for_y_end
+
+    mov qword [rbp-96], 0           ; x
+    jmp .for_x_start
+.for_x_cont:
+    mov rcx, qword [rbp-96]         ; x
+    inc rcx
+    mov qword [rbp-96], rcx         ; x
+.for_x_start:
+    mov rax, qword [rbp-96]         ; x
+    cmp rax, 3
+    jge .for_x_end
+
+    mov qword [rbp-104], 0          ; z
+    cmp rax, 0
+    jne .z_skip
+    mov qword [rbp-104], 1
+.z_skip:
+
+    mov rax, qword [rbp-88]         ; y
+    cmp rax, 1
+    jl .grass
+    cmp rax, 3
+    jg .grass
+
+    mov rax, qword [rbp-96]         ; x
+    cmp rax, 1
+    jne .grass
+
+    mov rax, 1
+    mov qword [rsp+24], rax
+    jmp .drawtile
+.grass:
+    mov rax, 5
+    mov qword [rsp+24], rax
+.drawtile:
     mov rcx, qword [rbp-8] ; wnd*
-    mov rdx, 0 ; x
-    mov r8, 0 ; y
-    mov r9, 0 ; z
-    mov qword [rsp+32], 0
+    mov rdx, qword [rbp-96] ; x
+    mov r8, qword [rbp-88] ; y
+    mov r9, qword [rbp-104] ; z
     call gfx_floor_tile
 
-    mov rcx, qword [rbp-8] ; wnd*
-    mov rdx, 1 ; x
-    mov r8, 0 ; y
-    mov r9, 0 ; z
-    mov qword [rsp+32], 0
-    call gfx_floor_tile
-
-    mov rcx, qword [rbp-8] ; wnd*
-    mov rdx, 2 ; x
-    mov r8, 0; y
-    mov r9, 0 ; z
-    mov qword [rsp+32], 0
-    call gfx_floor_tile
+    jmp .for_x_cont
+.for_x_end:
+    jmp .for_y_cont
+.for_y_end:
 
     mov rcx, qword [rbp-8] ; wnd*
     call wnd_flush

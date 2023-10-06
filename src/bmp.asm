@@ -16,7 +16,15 @@ section .data
     str_bmp_writing db 'Writing index %d.', 0xd, 0xa, 0
 
 section .bss
-    bmp_test    resq    1
+    bmp_error       resq    1
+    bmp_carpet      resq    1
+    bmp_rock        resq    1
+    bmp_wood        resq    1
+    bmp_dirt        resq    1
+    bmp_grass_top   resq    1
+    bmp_grass_side  resq    1
+    bmp_glass       resq    1
+    bmp_leaf        resq    1
 
 section .text
     extern printf
@@ -25,6 +33,10 @@ section .text
     extern srand
     extern rand
     extern ExitProcess
+    extern col_clamp
+    extern col_darken
+    extern rnd_next
+    extern rnd_start
 
     global bmp_init
     global bmp_get
@@ -41,101 +53,183 @@ section .text
 ;     uint8_t padding[8]        +24
 ; }
 
-; uint64_t rnd_next(uint64_t bound);
-rnd_next:
-    push rbp
-    mov rbp, rsp
-    sub rsp, 64
-
-    mov qword [rbp-8], rcx
-
-    call rand       ; generate random number
-    xor rdx, rdx    ; set rdx to 0 (rdx:rax / rcx = quot:rax rem:rdx)
-    mov rcx, qword [rbp-8]
-    div rcx         ; rcx = bound, divide by rcx
-
-    mov rax, rdx    ; return remainder
-
-    mov rsp, rbp
-    pop rbp
-    ret
-
-; uint64_t col_clamp(uint64_t ch);
-col_clamp:
-    push rbp
-    mov rbp, rsp
-    sub rsp, 32
-
-    cmp rcx, 0
-    jge .else0
-    xor rax, rax
-    mov rsp, rbp
-    pop rbp
-    ret
-.else0:
-    cmp rcx, 255
-    jle .else1
-    mov rax, 255
-    mov rsp, rbp
-    pop rbp
-    ret
-.else1:
-    mov rax, rcx
-    mov rsp, rbp
-    pop rbp
-    ret
-
-; uint64_t col_darken(uint64_t col, uint64_t n, uint64_t d);
-col_darken:
-    push rbp
-    mov rbp, rsp
-    sub rsp, 80
-
-    mov qword [rbp-8], rbx          ; backup rbx
-    mov qword [rbp-16], rcx         ; col
-    mov qword [rbp-24], rdx         ; n
-    mov qword [rbp-32], r8          ; d
-    mov rax, qword [rbp-16]
-    shr rax, 16
-    and rax, 255
-    mul rdx
-    xor rdx, rdx
-    div r8
-    shl rax, 16
-    mov qword [rbp-40], rax
-    mov rax, qword [rbp-16]
-    shr rax, 8
-    and rax, 255
-    mul qword [rbp-24]
-    xor rdx, rdx
-    div qword [rbp-32]
-    shl rax, 8
-    or rax, qword [rbp-40]
-    mov qword [rbp-40], rax
-    mov rax, qword [rbp-16]
-    and rax, 255
-    mul qword [rbp-24]
-    xor rdx, rdx
-    div qword [rbp-32]
-    or rax, qword [rbp-40]
-    mov rsp, rbp
-    pop rbp
-    ret
-
 ; void bmp_init(void);
 bmp_init:
     push rbp
     mov rbp, rsp
-    sub rsp, 80
+    sub rsp, 96
 
-    ; seed rand with a random integer (based on seed 0)
-    xor rcx, rcx
-    call srand
-    call rand
-    mov rcx, rax
-    call srand
+    ; local variables
+    ; rbx               -8
+    ; bmp               -16
+    ; i                 -24
+    ; x                 -32
+    ; y                 -40
+    ; xindex            -48
+    ; yindex            -56
+    ; darken            -64
 
-    mov qword [rbp-8], rbx      ; backup rbx
+    ; backup rbx
+    mov qword [rbp-8], rbx
+
+    ; seed random
+    call rnd_start
+
+    ; texture error
+
+    mov rcx, 8                  ; width
+    mov rdx, 8                  ; height
+    call bmp_alloc
+    mov qword [rbp-16], rax     ; bmp*
+
+    mov qword [rbp-40], 0       ; y
+    jmp .for_y_start_0
+.for_y_cont_0:
+    mov rcx, qword [rbp-40]     ; y
+    inc rcx
+    mov qword [rbp-40], rcx     ; y
+.for_y_start_0:
+    mov rax, qword [rbp-40]     ; y
+    cmp rax, 8
+    jge .for_y_end_0
+    
+    shr rax, 2
+    mov qword [rbp-56], rax     ; yindex = y / 4
+    
+    mov qword [rbp-32], 0       ; x
+    jmp .for_x_start_0
+.for_x_cont_0:
+    mov rcx, qword [rbp-32]     ; x
+    inc rcx
+    mov qword [rbp-32], rcx     ; x
+.for_x_start_0:
+    mov rax, qword [rbp-32]     ; x
+    cmp rax, 8
+    jge .for_x_end_0
+
+    shr rax, 2
+    mov qword [rbp-48], rax     ; xindex = x / 4
+    add rax, qword [rbp-56]
+    xor rdx, rdx
+    mov rcx, 2
+    div rcx
+    cmp rdx, 0
+    je .purple_0
+    mov r8, 0x00ff00
+    jmp .else_0
+.purple_0:
+    mov r8, 0x7f007f
+.else_0:
+    mov rax, qword [rbp-40]
+    mov rcx, 8
+    mul rcx
+    add rax, qword [rbp-32]
+    mov rbx, qword [rbp-16]
+    mov rdx, [rbx]
+    mov rbx, rdx
+    mov rcx, r8
+    mov dword [rbx+rax*4], ecx
+
+    jmp .for_x_cont_0
+.for_x_end_0:
+    jmp .for_y_cont_0
+.for_y_end_0:
+    mov rax, qword [rbp-16]
+    mov qword [bmp_error], rax
+    
+    ; texture carpet (1)
+
+    mov rcx, 8
+    mov rdx, 8
+    call bmp_alloc
+    mov qword [rbp-16], rax     ; bmp*
+
+    mov qword [rbp-40], 0       ; y
+    jmp .for_y_start_1
+.for_y_cont_1:
+    mov rcx, qword [rbp-40]     ; y
+    inc rcx
+    mov qword [rbp-40], rcx     ; y
+.for_y_start_1:
+    mov rax, qword [rbp-40]     ; y
+    cmp rax, 8
+    jge .for_y_end_1
+
+    mov qword [rbp-32], 0       ; x
+    jmp .for_x_start_1
+.for_x_cont_1:
+    mov rcx, qword [rbp-32]     ; x
+    inc rcx
+    mov qword [rbp-32], rcx     ; x
+.for_x_start_1:
+    mov rax, qword [rbp-32]     ; x
+    cmp rax, 8
+    jge .for_x_end_1
+
+.start_inner_1:
+    mov rax, qword [rbp-32]     ; x
+    cmp rax, 2
+    jl .start_ring_1
+    cmp rax, 5
+    jg .start_ring_1
+    mov rax, qword [rbp-40]     ; y
+    cmp rax, 2
+    jl .start_ring_1
+    cmp rax, 5
+    jl .start_ring_1
+
+    mov rcx, 8
+    call rnd_next
+    add rax, 24
+    mov qword [rbp-64], rax     ; darken
+    jmp .skip_1
+.start_ring_1:
+    mov rax, qword [rbp-32]     ; x
+    cmp rax, 1
+    jl .start_outer_1
+    cmp rax, 6
+    jg .start_outer_1
+    mov rax, qword [rbp-40]     ; y
+    cmp rax, 1
+    jl .start_outer_1
+    cmp rax, 6
+    jg .start_outer_1
+    
+    mov rcx, 8
+    call rnd_next
+    add rax, 20
+    mov qword [rbp-64], rax     ; darken
+    jmp .skip_1
+.start_outer_1:
+    mov rcx, 8
+    call rnd_next
+    add rax, 29
+    mov qword [rbp-64], rax     ; darken
+.skip_1:
+    mov rcx, 0xff0000
+    mov rdx, qword [rbp-64]
+    mov r8, 48
+    call col_darken
+    mov r8, rax
+    mov rax, qword [rbp-40]
+    mov rcx, 8
+    mul rcx
+    add rax, qword [rbp-32]
+    mov rbx, qword [rbp-16]
+    mov rdx, [rbx]
+    mov rbx, rdx
+    mov rcx, r8
+    mov dword [rbx+rax*4], ecx
+
+    jmp .for_x_cont_1
+.for_x_end_1:
+    jmp .for_y_cont_1
+.for_y_end_1:
+    mov rax, qword [rbp-16]
+    mov qword [bmp_carpet], rax
+
+    ; texture grass top (5)
+
     mov rcx, 8                 ; width
     mov rdx, 8                 ; height
     call bmp_alloc
@@ -171,7 +265,7 @@ bmp_init:
     xor rax, rax
     call printf
     mov rax, qword [rbp-16]
-    mov qword [bmp_test], rax
+    mov qword [bmp_grass_top], rax
 
     xor rax, rax
     mov rsp, rbp
@@ -182,18 +276,24 @@ bmp_init:
 bmp_get:
     push rbp
     mov rbp, rsp
-    sub rsp, 32
-
+    sub rsp, 64
+    
     cmp rcx, 0
     je .ret_0
-
-    xor rax, rax
-    mov rsp, rbp
-    pop rbp
-    ret
-
-.ret_0:
-    mov rax, [bmp_test]
+    cmp rcx, 1
+    je .ret_1
+    cmp rcx, 5
+    je .ret_5
+.ret_0: ; error texture
+    mov rax, [bmp_error]
+    jmp .done
+.ret_1: ; carpet texture
+    mov rax, [bmp_carpet]
+    jmp .done
+.ret_5: ; grass top texture
+    mov rax, [bmp_grass_top]
+    jmp .done
+.done:
     mov rsp, rbp
     pop rbp
     ret
