@@ -51,6 +51,8 @@ section .text
     extern gfx_bmp
     extern gfx_floor_tile
     extern gfx_floor
+    extern gfx_wall_tile
+    extern gfx_wall
     extern bmp_init
     extern bmp_get
 
@@ -187,8 +189,40 @@ main:
     mov rcx, qword [rbp-8] ; wnd*
     mov rdx, qword [rbp-96] ; x
     mov r8, qword [rbp-88] ; y
-    mov r9, qword [rbp-104] ; z
+    mov r9, 0 ; z
     call gfx_floor_tile
+
+    mov rax, qword [rbp-96] ; x
+    cmp rax, 0
+    jne .leftwall_skip
+
+    mov rcx, qword [rbp-8]
+    mov rdx, qword [rbp-96]
+    mov r8, qword [rbp-88]
+    inc r8
+    mov r9, 0
+    mov rax, 0
+    mov qword [rsp+24], rax
+    mov rax, 1
+    mov qword [rsp+32], rax
+    call gfx_wall_tile
+.leftwall_skip:
+
+    mov rax, qword [rbp-88] ; y
+    cmp rax, 0
+    jne .rightwall_skip
+
+    mov rcx, qword [rbp-8]
+    mov rdx, qword [rbp-96]
+    mov r8, qword [rbp-88]
+    dec r8
+    mov r9, 0
+    mov rax, 0
+    mov qword [rsp+24], rax
+    mov rax, 0
+    mov qword [rsp+32], rax
+    call gfx_wall_tile
+.rightwall_skip:
 
     jmp .for_x_cont
 .for_x_end:
