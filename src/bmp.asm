@@ -688,6 +688,8 @@ bmp_get:
     je .get_1
     cmp rcx, 2
     je .get_2
+    cmp rcx, 3
+    je .get_3
     cmp rcx, 4
     je .get_4
     cmp rcx, 5
