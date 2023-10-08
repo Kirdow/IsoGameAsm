@@ -230,6 +230,170 @@ bmp_init:
     mov rax, qword [rbp-16]
     mov qword [bmp_carpet], rax
 
+    ; texture rock (2)
+
+    mov rcx, 8                  ; width
+    mov rdx, 8                  ; height
+    call bmp_alloc
+    mov qword [rbp-16], rax     ; bmp*
+
+    mov qword [rbp-40], 0       ; y
+    jmp .for_y_start_2
+.for_y_cont_2:
+    mov rcx, qword [rbp-40]     ; y
+    inc rcx
+    mov qword [rbp-40], rcx     ; y
+.for_y_start_2:
+    cmp qword [rbp-40], 8       ; y
+    jge .for_y_end_2
+
+    mov qword [rbp-32], 0       ; x
+    jmp .for_x_start_2
+.for_x_cont_2:
+    mov rcx, qword [rbp-32]     ; x
+    inc rcx
+    mov qword [rbp-32], rcx     ; x
+.for_x_start_2:
+    cmp qword [rbp-32], 8       ; x
+    jge .for_x_end_2
+
+    mov rcx, 255
+    xor rax, rax
+    or rax, rcx                 ; use grayscale
+    shl rax, 8                  ;
+    or rax, rcx                 ;
+    shl rax, 8                  ;
+    or rax, rcx                 ;
+    mov qword [rbp-80], rax     ; col
+
+    cmp qword [rbp-32], 0       ; x
+    je .if_2
+    cmp qword [rbp-40], 0       ; y
+    je .if_2
+    cmp qword [rbp-32], 7       ; x
+    je .if_2
+    cmp qword [rbp-40], 7       ; y
+    jne .if_2_else
+.if_2:
+    mov rcx, 8
+    call rnd_next
+    add rax, 32
+    jmp .if_2_skip
+.if_2_else:
+    mov rcx, 8
+    call rnd_next
+    add rax, 24
+.if_2_skip:
+    mov rdx, rax
+    mov rcx, qword [rbp-80]     ; col
+    mov r8, 48
+    call col_darken
+    mov r10, rax
+
+    mov rax, 8
+    mov rcx, qword [rbp-40]
+    mul rcx
+    add rax, qword [rbp-32]
+
+    mov rbx, qword [rbp-16]
+    mov rdx, [rbx]
+    mov rbx, rdx
+    mov rcx, r10
+    mov dword [rbx+rax*4], ecx
+
+    jmp .for_x_cont_2
+.for_x_end_2:
+    jmp .for_y_cont_2
+.for_y_end_2:
+    mov rax, qword [rbp-16]
+    mov qword [bmp_rock], rax
+
+    ; texture wood (3)
+
+    mov rcx, 8                  ; width
+    mov rdx, 8                  ; height
+    call bmp_alloc
+    mov qword [rbp-16], rax     ; bmp*
+
+    mov qword [rbp-40], 0       ; y
+    jmp .for_y_start_3
+.for_y_cont_3:
+    mov rcx, qword [rbp-40]     ; y
+    inc rcx
+    mov qword [rbp-40], rcx     ; y
+.for_y_start_3:
+    cmp qword [rbp-40], 8       ; y
+    jge .for_y_end_3
+
+    mov qword [rbp-32], 0       ; x
+    jmp .for_x_start_3
+.for_x_cont_3:
+    mov rcx, qword [rbp-32]     ; x
+    inc rcx
+    mov qword [rbp-32], rcx     ; x
+.for_x_start_3:
+    cmp qword [rbp-32], 8       ; x
+    jge .for_x_end_3
+
+    mov rax, qword [rbp-32]     ; x
+    shr rax, 1
+    mov rcx, 2
+    xor rdx, rdx
+    div rcx
+    mov rax, 1
+    cmp rdx, 0
+    cmove rbx, rax
+    mov qword [rbp-48], rbx     ; xIndex
+
+    mov rax, qword [rbp-32]     ; x
+    shr rax, 2
+    mov rcx, 2
+    xor rdx, rdx
+    div rcx
+    mov rax, 1
+    cmp rdx, 0
+    cmove rbx, rax
+    mov qword [rbp-56], rbx     ; zIndex
+
+    mov r8, 32
+    mov r9, 22
+    cmp qword [rbp-48], 1       ; xIndex
+    cmove r8, r9
+    mov qword [rbp-64], r8
+
+    mov r8, 1
+    xor r9, r9
+    cmp qword [rbp-56], 1       ; zIndex
+    cmove r8, r9
+    add qword [rbp-64], r8
+    mov rcx, 8
+    call rnd_next
+    add qword [rbp-64], rax
+
+    mov rcx, 0xAF9142
+    mov rdx, qword [rbp-64]
+    mov r8, 48
+    call col_darken
+    mov r10, rax
+
+    mov rax, 8
+    mov rcx, qword [rbp-40]
+    mul rcx
+    add rax, qword [rbp-32]
+
+    mov rbx, qword [rbp-16]
+    mov rdx, [rbx]
+    mov rbx, rdx
+    mov rcx, r10
+    mov dword [rbx+rax*4], ecx
+
+    jmp .for_x_cont_3
+.for_x_end_3:
+    jmp .for_y_cont_3
+.for_y_end_3:
+    mov rax, qword [rbp-16]
+    mov qword [bmp_wood], rax
+
     ; texture dirt (4)
 
     mov rcx, 8                  ; width
@@ -376,6 +540,137 @@ bmp_init:
     mov rax, qword [rbp-16]
     mov qword [bmp_grass_side], rax
 
+    mov rcx, 8                  ; width
+    mov rdx, 8                  ; height
+    call bmp_alloc
+    mov qword [rbp-16], rax     ; bmp*
+
+    mov qword [rbp-40], 0       ; y
+    jmp .for_y_start_7
+.for_y_cont_7:
+    mov rcx, qword [rbp-40]     ; y
+    inc rcx
+    mov qword [rbp-40], rcx     ; y
+.for_y_start_7:
+    cmp qword [rbp-40], 8       ; y
+    jge .for_y_end_7
+
+    mov qword [rbp-32], 0       ; x
+    jmp .for_x_start_7
+.for_x_cont_7:
+    mov rcx, qword [rbp-32]     ; x
+    inc rcx
+    mov qword [rbp-32], rcx     ; x
+.for_x_start_7:
+    cmp qword [rbp-32], 8       ; x
+    jge .for_x_end_7
+
+    cmp qword [rbp-32], 0       ; x
+    je .and_0_7
+    cmp qword [rbp-32], 7       ; x
+    je .and_0_7
+    cmp qword [rbp-40], 0       ; y
+    je .and_0_7
+    cmp qword [rbp-40], 7       ; y
+    jne .or_1_7
+.and_0_7:
+    cmp qword [rbp-32], 2       ; x
+    je .or_1_7
+    cmp qword [rbp-32], 5       ; x
+    je .or_1_7
+.and_01_7:
+    cmp qword [rbp-40], 2       ; y
+    je .or_1_7
+    cmp qword [rbp-40], 5       ; y
+    jne .if_7
+.or_1_7:
+    cmp qword [rbp-32], 4       ; x
+    jne .else_7
+    cmp qword [rbp-40], 4       ; y
+    jne .else_7
+.if_7:
+    mov rax, 0xFFFFFF
+    jmp .if_7_skip
+.else_7:
+    mov rax, 0xFF00FF
+.if_7_skip:
+    mov r10, rax
+    
+    mov rax, qword [rbp-40]     ; y
+    shl rax, 3
+    add rax, qword [rbp-32]     ; x
+
+    mov rbx, qword [rbp-16]
+    mov rdx, [rbx]
+    mov rbx, rdx
+    mov rcx, r10
+    mov dword [rbx+rax*4], ecx
+
+    jmp .for_x_cont_7
+.for_x_end_7:
+    jmp .for_y_cont_7
+.for_y_end_7:
+    mov rax, qword [rbp-16]
+    mov qword [bmp_glass], rax
+
+    ; texture leaf (8)
+
+    mov rcx, 8                  ; width
+    mov rdx, 8                  ; height
+    call bmp_alloc
+    mov qword [rbp-16], rax     ; bmp*
+
+    mov qword [rbp-40], 0       ; y
+    jmp .for_y_start_8
+.for_y_cont_8:
+    mov rcx, qword [rbp-40]     ; y
+    inc rcx
+    mov qword [rbp-40], rcx     ; y
+.for_y_start_8:
+    cmp qword [rbp-40], 8       ; y
+    jge .for_y_end_8
+
+    mov qword [rbp-32], 0       ; x
+    jmp .for_x_start_8
+.for_x_cont_8:
+    mov rcx, qword [rbp-32]     ; x
+    inc rcx
+    mov qword [rbp-32], rcx     ; x
+.for_x_start_8:
+    cmp qword [rbp-32], 8       ; x
+    jge .for_x_end_8
+
+    mov rcx, 5
+    call rnd_next
+    cmp rax, 2
+    jge .else_8
+    mov r10, 0xFF00FF
+    jmp .skip_8
+.else_8:
+    mov rcx, 8
+    call rnd_next
+    lea rdx, [rax + 24]
+    mov r8, 48
+    mov rcx, 0x1CBC26
+    call col_darken
+    mov r10, rax
+.skip_8:
+    mov rax, qword [rbp-40]     ; y
+    shl rax, 3
+    add rax, qword [rbp-32]     ; x
+    mov rbx, qword [rbp-16]
+    mov rdx, [rbx]
+    mov rbx, rdx
+    mov rcx, r10
+    mov dword [rbx+rax*4], ecx
+
+    jmp .for_x_cont_8
+.for_x_end_8:
+    jmp .for_y_cont_8
+.for_y_end_8:
+    mov rax, qword [rbp-16]
+    mov qword [bmp_leaf], rax
+
     xor rax, rax
     mov rsp, rbp
     pop rbp
@@ -391,17 +686,29 @@ bmp_get:
     je .get_0
     cmp rcx, 1
     je .get_1
+    cmp rcx, 2
+    je .get_2
     cmp rcx, 4
     je .get_4
     cmp rcx, 5
     je .get_5
     cmp rcx, 6
     je .get_6
+    cmp rcx, 7
+    je .get_7
+    cmp rcx, 8
+    je .get_8
 .get_0:
     mov rax, [bmp_dirt]
     jmp .done
 .get_1:
     mov rax, [bmp_carpet]
+    jmp .done
+.get_2:
+    mov rax, [bmp_rock]
+    jmp .done
+.get_3:
+    mov rax, [bmp_wood]
     jmp .done
 .get_4:
     mov rax, [bmp_dirt]
@@ -411,6 +718,12 @@ bmp_get:
     jmp .done
 .get_6:
     mov rax, [bmp_grass_side]
+    jmp .done
+.get_7:
+    mov rax, [bmp_glass]
+    jmp .done
+.get_8:
+    mov rax, [bmp_leaf]
     jmp .done
 .done:
     mov rsp, rbp

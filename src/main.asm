@@ -267,6 +267,83 @@ main:
     jmp .for_xl_cont
 .for_xl_end:
 
+    mov qword [rbp-96], 0           ; x
+    jmp .for_xl_start_1
+.for_xl_cont_1:
+    mov rcx, qword [rbp-96]         ; x
+    inc rcx
+    mov qword [rbp-96], rcx         ; x
+.for_xl_start_1:
+    cmp qword [rbp-96], 2           ; x
+    jge .for_xl_end_1
+
+    mov qword [rbp-88], 0           ; y
+    jmp .for_yl_start_1
+.for_yl_cont_1:
+    mov rcx, qword [rbp-88]         ; y
+    inc rcx
+    mov qword [rbp-88], rcx         ; y
+.for_yl_start_1:
+    cmp qword [rbp-88], 3           ; y
+    jge .for_yl_end_1
+
+    mov rcx, qword [rbp-112]        ; level
+    mov rdx, qword [rbp-96]         ; x
+    add rdx, 1
+    mov r8, qword [rbp-88]         ; y
+    add r8, 1
+    mov r9, 2
+    mov qword [rsp+24], 2
+    mov qword [rsp+32], 0x20
+    call level_set_tile
+
+    mov rcx, qword [rbp-112]        ; level
+    mov rdx, qword [rbp-96]         ; x
+    add rdx, 3
+    mov r8, qword [rbp-88]          ; y
+    add r8, 1
+    mov r9, 2
+    mov qword [rsp+24], 1
+    mov qword [rsp+32], 0x20
+    call level_set_tile
+
+    cmp qword [rbp-96], 1           ; x == 1
+    jne .skip_l1
+
+    mov qword [rbp-120], 0x09
+    cmp qword [rbp-88], 2           ; y == 2
+    jne .skip_l1_2
+    or qword [rbp-120], 0x10
+.skip_l1_2:
+    
+    mov rcx, qword [rbp-112]        ; level
+    mov rdx, qword [rbp-96]         ; x
+    add rdx, 1
+    mov r8, qword [rbp-88]          ; y
+    add r8, 1
+    mov r9, 2
+    mov qword [rsp+24], 8
+    mov rax, qword [rbp-120]
+    mov qword [rsp+32], rax
+    call level_set_tile
+
+    mov rcx, qword [rbp-112]        ; level
+    mov rdx, qword [rbp-96]         ; x
+    add rdx, 3
+    mov r8, qword [rbp-88]          ; y
+    add r8, 1
+    mov r9, 2
+    mov qword [rsp+24], 7
+    mov rax, qword [rbp-120]
+    mov qword [rsp+32], rax
+    call level_set_tile
+.skip_l1:
+    
+    jmp .for_yl_cont_1
+.for_yl_end_1:
+    jmp .for_xl_cont_1
+.for_xl_end_1:
+
     mov qword [rbp-16], 1 ; running = true
     
     mov qword [rbp-80], 0x0000ff
