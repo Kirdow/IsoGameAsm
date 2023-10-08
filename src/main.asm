@@ -30,6 +30,7 @@ section .data
     success db 'Success', 0xd, 0xa, 0
     failed db 'Failed', 0xd, 0xa, 0
 
+    str_logdata db 'Data:', 0xd, 0xa, 0
     str_logn db 'Number: %llx', 0xd, 0xa, 0
     str_logn2 db 'Number: %lld', 0xd, 0xa, 0
     str_logs db 'String: %s', 0xd, 0xa, 0
@@ -55,6 +56,12 @@ section .text
     extern gfx_wall
     extern bmp_init
     extern bmp_get
+    extern level_create
+    extern level_free
+    extern level_set_tile
+    extern level_set_wall
+    extern level_set_floor
+    extern level_draw
 
 entry:
     push rbp
@@ -75,6 +82,18 @@ main:
     push rbp
     mov rbp, rsp
     sub rsp, 176
+    
+    ; local variables
+    ; window            -8
+    ; running           -16
+    ; event             -72 (size 56)
+    ; color             -80
+    ; y                 -88
+    ; x                 -96
+    ; z                 -104
+    ; level             -112
+    ; flag              -120
+    ; tileId            -128
     
     call bmp_init
 
@@ -111,6 +130,143 @@ main:
     ret
 .cont2:
     mov qword [rbp-8], rax ; wnd*
+
+    mov rcx, 8                      ; size 8
+    call level_create
+    mov qword [rbp-112], rax        ; level
+
+    mov rcx, 128
+    call malloc
+    mov qword [rbp-24], rax
+
+    mov qword [rbp-96], 0           ; x
+    jmp .for_xl_start
+.for_xl_cont:
+    mov rcx, qword [rbp-96]         ; x
+    inc rcx
+    mov qword [rbp-96], rcx         ; x
+.for_xl_start:
+    mov rax, qword [rbp-96]         ; x
+    cmp rax, 5
+    jge .for_xl_end
+
+    mov qword [rbp-104], 0          ; z
+    jmp .for_zl_start
+.for_zl_cont:
+    mov rcx, qword [rbp-104]        ; z
+    inc rcx
+    mov qword [rbp-104], rcx        ; z
+.for_zl_start:
+    mov rax, qword [rbp-104]        ; z
+    cmp rax, 2
+    jge .for_zl_end
+
+    mov qword [rbp-88], 0           ; y
+    jmp .for_yl_start
+.for_yl_cont:
+    mov rcx, qword [rbp-88]         ; y
+    inc rcx
+    mov qword [rbp-88], rcx         ; y
+.for_yl_start:
+    mov rcx, 7
+    sub rcx, qword [rbp-104]        ; 7 - z
+    mov rax, qword [rbp-88]         ; y
+    cmp rax, rcx
+    jge .for_yl_end
+
+
+    mov rax, qword [rbp-96]         ; x
+    cmp rax, 4
+    jne .if_4_next_0
+
+    ; if x == 4
+
+    mov qword [rbp-120], 0          ; flag
+
+    cmp qword [rbp-104], 0          ; z != 0
+    jne .if_flag_0
+    cmp qword [rbp-88], 6           ; y == 6
+    jne .if_flag_0_skip
+.if_flag_0:
+    mov rax, qword [rbp-120]
+    or rax, 0x08                    ; A_RIGHT_OUTER
+    mov qword [rbp-120], rax
+.if_flag_0_skip:
+    mov rax, qword [rbp-88]         ; y
+    sub rax, 6                      ; y - 6
+    xor rcx, rcx                    ; 0
+    sub rcx, qword [rbp-104]        ; 0 - z (-z)
+    cmp rax, rcx
+    jne .if_flag_1_skip
+    mov rax, qword [rbp-120]
+    or rax, 0x10                    ; A_LEFT_OUTER
+    mov qword [rbp-120], rax
+.if_flag_1_skip:
+    mov qword [rbp-128], 6          ; grass side
+
+    cmp qword [rbp-120], 0          ; flag == 0
+    jne .if_flag_2_skip
+    cmp qword [rbp-104], 0          ; z == 0
+    jne .if_flag_2_skip
+    mov rax, qword [rbp-120]
+    or rax, 0x08                    ; A_RIGHT_OUTER
+    mov qword [rbp-120], rax
+    mov qword [rbp-128], 4          ; dirt 
+.if_flag_2_skip:
+
+    mov rcx, qword [rbp-112]        ; level
+    mov rdx, qword [rbp-96]         ; x
+    mov r8, qword [rbp-88]          ; y
+    mov r9, qword [rbp-104]         ; z
+    mov rax, qword [rbp-128]        ; tileId
+    mov qword [rsp+24], rax
+    mov rax, qword [rbp-120]        ; flag
+    mov qword [rsp+32], rax
+    call level_set_tile
+
+    jmp .if_4_next_1
+.if_4_next_0:
+    xor rcx, rcx
+    sub rcx, qword [rbp-104]        ; -z
+    mov rax, qword [rbp-88]
+    sub rax, 6                      ; y - 6
+    cmp rax, rcx
+    jne .if_4_next_1
+
+    mov rcx, qword [rbp-112]        ; level
+    mov rdx, qword [rbp-96]         ; x
+    mov r8, qword [rbp-88]          ; y
+    mov r9, qword [rbp-104]         ; z
+    sub rsp, 16
+    mov qword [rsp+24], 6           ; grass side
+    mov qword [rsp+32], 0x10        ; A_LEFT_OUTER
+    call level_set_tile
+    add rsp, 16
+.if_4_next_1:
+    cmp qword [rbp-104], 0
+    jne .if_z0
+    cmp qword [rbp-88], 6
+    jne .if_z0_skip
+.if_z0:
+    ; if z != 0 || y == 6
+
+    mov rcx, qword [rbp-112]        ; level
+    mov rdx, qword [rbp-96]         ; x
+    mov r8, qword [rbp-88]          ; y
+    mov r9, qword [rbp-104]         ; z
+    sub rsp, 16
+    mov qword [rsp+24], 5           ; grass top
+    mov qword [rsp+32], 0x01        ; A_TOP
+    call level_set_tile
+    add rsp, 16
+.if_z0_skip:
+    jmp .for_yl_cont
+.for_yl_end:
+    jmp .for_zl_cont
+.for_zl_end:
+    jmp .for_xl_cont
+.for_xl_end:
+
     mov qword [rbp-16], 1 ; running = true
     
     mov qword [rbp-80], 0x0000ff
@@ -119,12 +275,13 @@ main:
     cmp rax, 0
     je .while_running_end
 .while_pollevent_start:
-    lea rcx, [rbp-72]
+    mov rcx, qword [rbp-24]
     call SDL_PollEvent
     cmp rax, 0
     je .while_pollevent_end
 
-    mov eax, dword [rbp-72] ; event.type
+    mov rbx, qword [rbp-24] ; event
+    mov eax, dword [rbx] ; event->type
     cmp eax, 0x100 ; SDL_QUIT
     jne .while_pollevent_start
     mov qword [rbp-16], 0 ; running = false
@@ -141,93 +298,9 @@ main:
     mov r9, 0
     call gfx_bmp
 
-    mov qword [rbp-88], 0           ; y
-    jmp .for_y_start
-.for_y_cont:
-    mov rcx, qword [rbp-88]         ; y
-    inc rcx
-    mov qword [rbp-88], rcx         ; y
-.for_y_start:
-    mov rax, qword [rbp-88]         ; y
-    cmp rax, 5
-    jge .for_y_end
-
-    mov qword [rbp-96], 0           ; x
-    jmp .for_x_start
-.for_x_cont:
-    mov rcx, qword [rbp-96]         ; x
-    inc rcx
-    mov qword [rbp-96], rcx         ; x
-.for_x_start:
-    mov rax, qword [rbp-96]         ; x
-    cmp rax, 3
-    jge .for_x_end
-
-    mov qword [rbp-104], 0          ; z
-    cmp rax, 0
-    jne .z_skip
-    mov qword [rbp-104], 1
-.z_skip:
-
-    mov rax, qword [rbp-88]         ; y
-    cmp rax, 1
-    jl .grass
-    cmp rax, 3
-    jg .grass
-
-    mov rax, qword [rbp-96]         ; x
-    cmp rax, 1
-    jne .grass
-
-    mov rax, 1
-    mov qword [rsp+24], rax
-    jmp .drawtile
-.grass:
-    mov rax, 5
-    mov qword [rsp+24], rax
-.drawtile:
-    mov rcx, qword [rbp-8] ; wnd*
-    mov rdx, qword [rbp-96] ; x
-    mov r8, qword [rbp-88] ; y
-    mov r9, 0 ; z
-    call gfx_floor_tile
-
-    mov rax, qword [rbp-96] ; x
-    cmp rax, 0
-    jne .leftwall_skip
-
-    mov rcx, qword [rbp-8]
-    mov rdx, qword [rbp-96]
-    mov r8, qword [rbp-88]
-    inc r8
-    mov r9, 0
-    mov rax, 0
-    mov qword [rsp+24], rax
-    mov rax, 1
-    mov qword [rsp+32], rax
-    call gfx_wall_tile
-.leftwall_skip:
-
-    mov rax, qword [rbp-88] ; y
-    cmp rax, 0
-    jne .rightwall_skip
-
-    mov rcx, qword [rbp-8]
-    mov rdx, qword [rbp-96]
-    mov r8, qword [rbp-88]
-    dec r8
-    mov r9, 0
-    mov rax, 0
-    mov qword [rsp+24], rax
-    mov rax, 0
-    mov qword [rsp+32], rax
-    call gfx_wall_tile
-.rightwall_skip:
-
-    jmp .for_x_cont
-.for_x_end:
-    jmp .for_y_cont
-.for_y_end:
+    mov rcx, qword [rbp-112]        ; level
+    mov rdx, qword [rbp-8]          ; window
+    call level_draw
 
     mov rcx, qword [rbp-8] ; wnd*
     call wnd_flush

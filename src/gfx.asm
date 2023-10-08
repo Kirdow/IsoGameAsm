@@ -845,11 +845,11 @@ gfx_wall:
     mov rax, qword [rbp-192]        ; right
     cmp rax, 0                      ; right == true
     je .right_false
-    xor rax, rax
-    sub rax, rcx                    ; yPix = -(xo / 2)
+    mov rax, rcx                    ; yPix = xo / 2
     jmp .right_skip
 .right_false:
-    mov rax, rcx                    ; yPix = xo / 2
+    xor rax, rax
+    sub rax, rcx                    ; yPix = -(xo / 2)
 .right_skip:
     mov rcx, qword [rbp-128]        ; yo
     shr rcx, 1                      ; yo / 2

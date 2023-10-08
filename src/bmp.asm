@@ -57,7 +57,7 @@ section .text
 bmp_init:
     push rbp
     mov rbp, rsp
-    sub rsp, 96
+    sub rsp, 112
 
     ; local variables
     ; rbx               -8
@@ -68,6 +68,8 @@ bmp_init:
     ; xindex            -48
     ; yindex            -56
     ; darken            -64
+    ; d                 -72
+    ; col               -80
 
     ; backup rbx
     mov qword [rbp-8], rbx
@@ -228,6 +230,44 @@ bmp_init:
     mov rax, qword [rbp-16]
     mov qword [bmp_carpet], rax
 
+    ; texture dirt (4)
+
+    mov rcx, 8                  ; width
+    mov rdx, 8                  ; height
+    call bmp_alloc
+    mov qword [rbp-16], rax     ; bmp*
+
+    mov qword [rbp-24], 0       ; i
+    jmp .for_i_start_4
+.for_i_cont_4:
+    mov rcx, qword [rbp-24]     ; i
+    inc rcx
+    mov qword [rbp-24], rcx     ; i
+.for_i_start_4:
+    cmp qword [rbp-24], 64      ; i
+    jge .for_i_end_4
+
+    mov rcx, 8
+    call rnd_next
+    add rax, 36
+    mov rdx, rax
+    mov r8, 48
+    mov rcx, 0x7A411A
+    call col_darken
+    mov r10, rax
+
+    mov rbx, qword [rbp-16]     ; bmp*
+    mov rax, [rbx]
+    mov rbx, rax
+    mov rax, qword [rbp-24]     ; i
+
+    mov dword [rbx+rax*4], r10d
+
+    jmp .for_i_cont_4
+.for_i_end_4:
+    mov rax, qword [rbp-16]
+    mov qword [bmp_dirt], rax
+
     ; texture grass top (5)
 
     mov rcx, 8                 ; width
@@ -260,12 +300,81 @@ bmp_init:
     mov rcx, qword [rbp-24]
     jmp .for_i_cont
 .for_i_end:
-    lea rcx, [str_bmp_writing]
-    mov rdx, -1
-    xor rax, rax
-    call printf
     mov rax, qword [rbp-16]
     mov qword [bmp_grass_top], rax
+
+    ; texture grass side (6)
+
+    mov rcx, 8                  ; width
+    mov rdx, 8                  ; height
+    call bmp_alloc
+    mov qword [rbp-16], rax     ; bmp*
+
+    mov qword [rbp-32], 0       ; x
+    jmp .for_x_start_6
+.for_x_cont_6:
+    mov rcx, qword [rbp-32]     ; x
+    inc rcx
+    mov qword [rbp-32], rcx     ; x
+.for_x_start_6:
+    cmp qword [rbp-32], 8       ; x
+    jge .for_x_end_6
+
+    mov rcx, 3
+    call rnd_next
+    inc rax
+    mov qword [rbp-72], rax     ; d
+
+    mov qword [rbp-40], 0       ; y
+    jmp .for_y_start_6
+.for_y_cont_6:
+    mov rcx, qword [rbp-40]     ; y
+    inc rcx
+    mov qword [rbp-40], rcx     ; y
+.for_y_start_6:
+    cmp qword [rbp-40], 8       ; y
+    jge .for_y_end_6
+
+    mov rax, qword [rbp-72]     ; d
+    cmp qword [rbp-40], rax     ; y < d
+    jge .else_6
+    mov rcx, 8
+    call rnd_next
+    lea rdx, [rax + 24]
+    mov r8, 48
+    mov rcx, 0x1CBC26
+    call col_darken
+    mov rcx, rax
+    jmp .skip_6
+.else_6:
+    mov rbx, qword [bmp_dirt]
+    mov rax, [rbx]
+    mov rbx, rax
+    mov rax, qword [rbp-40]     ; y
+    mov rcx, 8
+    mul rcx
+    add rax, qword [rbp-32]     ; x
+    
+    xor rcx, rcx
+    mov ecx, dword [rbx+rax*4]
+.skip_6:
+    mov r10, rcx
+    mov rax, qword [rbp-40]     ; y
+    mov rcx, 8
+    mul rcx
+    add rax, qword [rbp-32]     ; x
+    mov rbx, qword [rbp-16]
+    mov rdx, [rbx]
+    mov rbx, rdx
+    mov rcx, r10
+    mov dword [rbx+rax*4], ecx
+
+    jmp .for_y_cont_6
+.for_y_end_6:
+    jmp .for_x_cont_6
+.for_x_end_6:
+    mov rax, qword [rbp-16]
+    mov qword [bmp_grass_side], rax
 
     xor rax, rax
     mov rsp, rbp
@@ -279,19 +388,29 @@ bmp_get:
     sub rsp, 64
     
     cmp rcx, 0
-    je .ret_0
+    je .get_0
     cmp rcx, 1
-    je .ret_1
+    je .get_1
+    cmp rcx, 4
+    je .get_4
     cmp rcx, 5
-    je .ret_5
-.ret_0: ; error texture
-    mov rax, [bmp_error]
+    je .get_5
+    cmp rcx, 6
+    je .get_6
+.get_0:
+    mov rax, [bmp_dirt]
     jmp .done
-.ret_1: ; carpet texture
+.get_1:
     mov rax, [bmp_carpet]
     jmp .done
-.ret_5: ; grass top texture
+.get_4:
+    mov rax, [bmp_dirt]
+    jmp .done
+.get_5:
     mov rax, [bmp_grass_top]
+    jmp .done
+.get_6:
+    mov rax, [bmp_grass_side]
     jmp .done
 .done:
     mov rsp, rbp

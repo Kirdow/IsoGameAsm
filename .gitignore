@@ -5,3 +5,10 @@ dist/
 # files
 .obj
 .exe
+
+# ide directories
+.vs/
+.vscode/
+
+# macOS stuff
+.DS_Store
