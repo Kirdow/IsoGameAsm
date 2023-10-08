@@ -682,52 +682,24 @@ bmp_get:
     mov rbp, rsp
     sub rsp, 64
     
-    cmp rcx, 0
-    je .get_0
-    cmp rcx, 1
-    je .get_1
-    cmp rcx, 2
-    je .get_2
-    cmp rcx, 3
-    je .get_3
-    cmp rcx, 4
-    je .get_4
-    cmp rcx, 5
-    je .get_5
-    cmp rcx, 6
-    je .get_6
-    cmp rcx, 7
-    je .get_7
-    cmp rcx, 8
-    je .get_8
-.get_0:
     mov rax, [bmp_error]
-    jmp .done
-.get_1:
-    mov rax, [bmp_carpet]
-    jmp .done
-.get_2:
-    mov rax, [bmp_rock]
-    jmp .done
-.get_3:
-    mov rax, [bmp_wood]
-    jmp .done
-.get_4:
-    mov rax, [bmp_dirt]
-    jmp .done
-.get_5:
-    mov rax, [bmp_grass_top]
-    jmp .done
-.get_6:
-    mov rax, [bmp_grass_side]
-    jmp .done
-.get_7:
-    mov rax, [bmp_glass]
-    jmp .done
-.get_8:
-    mov rax, [bmp_leaf]
-    jmp .done
-.done:
+    cmp rcx, 1
+    cmove rax, [bmp_carpet]
+    cmp rcx, 2
+    cmove rax, [bmp_rock]
+    cmp rcx, 3
+    cmove rax, [bmp_wood]
+    cmp rcx, 4
+    cmove rax, [bmp_dirt]
+    cmp rcx, 5
+    cmove rax, [bmp_grass_top]
+    cmp rcx, 6
+    cmove rax, [bmp_grass_side]
+    cmp rcx, 7
+    cmove rax, [bmp_glass]
+    cmp rcx, 8
+    cmove rax, [bmp_leaf]
+
     mov rsp, rbp
     pop rbp
     ret
