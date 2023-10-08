@@ -699,7 +699,7 @@ bmp_get:
     cmp rcx, 8
     je .get_8
 .get_0:
-    mov rax, [bmp_dirt]
+    mov rax, [bmp_error]
     jmp .done
 .get_1:
     mov rax, [bmp_carpet]
